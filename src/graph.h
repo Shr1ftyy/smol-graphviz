@@ -5,78 +5,92 @@
 
 typedef struct node
 {
-    struct dynamic_node_array* connections;
-    float weight;
+    float value;
     bool searched;
 } node;
 
-typedef struct dynamic_node_array
+typedef struct edge
 {
-    node** nodes;
-    size_t size;
-} dynamic_node_array;
+    float weight;
+    node* start;
+    node* end;
+} edge;
 
+typedef struct dynamic_edge_array
+{
+    edge** edges;
+    size_t size;
+} dynamic_edge_array;
 
 typedef struct graph
 {
-    dynamic_node_array* node_array;
+    dynamic_edge_array* edges;
     bool directed;
 } graph;
 
-dynamic_node_array* new_array()
+node* node_new(float _value)
 {
-    dynamic_node_array* arr = (dynamic_node_array*)malloc(sizeof(dynamic_node_array));
+    node* n = (node*)malloc(sizeof(node));
+    n->value = _value;
+    n->searched = false;
+    
+    return n;
+}
+
+dynamic_edge_array* new_edge_array()
+{
+    dynamic_edge_array* arr = (dynamic_edge_array*)malloc(sizeof(dynamic_edge_array));
     arr->size = 0;
     return arr;
 }
 
-dynamic_node_array* reserve_new_array(size_t _size)
+dynamic_edge_array* reserve_new_edge_array(size_t _size)
 {
-    dynamic_node_array* arr = (dynamic_node_array*)malloc(sizeof(dynamic_node_array) * _size);
-    arr->nodes =  (node**)malloc(sizeof(node*) * _size);
+    dynamic_edge_array* arr = (dynamic_edge_array*)malloc(sizeof(dynamic_edge_array) * _size);
+    arr->edges =  (edge**)malloc(sizeof(edge*) * _size);
     arr->size = 0;
     return arr;
 }
 
-void* resize_node_array(dynamic_node_array* _array, size_t _size)
+void* resize_edge_array(dynamic_edge_array* _array, size_t _size)
 {
     if (_array->size == 0)
     {
-        _array->nodes = (node**)malloc(_size * sizeof(node*));
+        _array->edges = (edge**)malloc(_size * sizeof(edge*));
     }
     else
     {
-        _array->nodes = (node**)realloc(_array->nodes, _size * sizeof(node*));
+        _array->edges = (edge**)realloc(_array->edges, _size * sizeof(edge*));
     }
-
+    
     _array->size = _size;
 }
 
-void append_node_array(dynamic_node_array* _n, node* _new_node, size_t _n_nodes)
+void append_edge_array(dynamic_edge_array* _n, edge* _new_edge, size_t _n_edges)
 {
-    resize_node_array(_n, (_n_nodes + 1));
-    _n->nodes[_n_nodes] = _new_node;
+    resize_edge_array(_n, (_n_edges + 1));
+    _n->edges[_n_edges] = _new_edge;
 }
 
-bool remove_node_from_array(dynamic_node_array* _n, node* _to_remove)
+bool remove_edge_from_array(dynamic_edge_array* _n, edge* _to_remove)
 {
-    // get index of the node in the node array
+    // get index of the edge in the edge array
     int pos;
     for(pos=0; pos<_n->size; pos++)
     {
-        if(_n->nodes[pos] != _to_remove) continue;
+        if(_n->edges[pos] != _to_remove) continue;
         
-        // free it when found
+        // free edge  when found
         free(_to_remove);
         _n->size--;
         
         // resize and reposition elements in dynamic array
         for(; pos<_n->size; pos++)
         {
-            _n->nodes[pos] = _n->nodes[pos+1];
+            _n->edges[pos] = _n->edges[pos+1];
         }
         
-        resize_node_array(_n, sizeof(node*)*_n->size);
+        resize_edge_array(_n, sizeof(edge*)*_n->size);
         
         return true;
     }
@@ -84,108 +98,83 @@ bool remove_node_from_array(dynamic_node_array* _n, node* _to_remove)
     return false;
 }
 
-node* node_new()
+edge* edge_new(float _weight, node* _start, node* _end)
 {
-    node* n = (node*)malloc(sizeof(node));
-    n->connections = new_array();
-    n->searched = false;
-    return n;
-}
-
-node* node_new_params(float _weight, dynamic_node_array* connected_to, size_t n_connected)
-{
-    node* n = node_new();
-    n->weight = _weight;
-
-    // resize connections array   
-    if(n_connected > 0)
-    {
-        n->connections = resize_node_array(n->connections, n->connections->size + n_connected);
-        for(size_t i=0; i<n_connected-1; i++)
-        {
-            n->connections->nodes[i] = connected_to->nodes[i];
-        }
-    }  
+    edge* e = (edge*)malloc(sizeof(edge));
+    e->weight = _weight;
+    e->start = _start;
+    e->end = _end;
     
-    return n;
+    return e;
 }
 
 graph* graph_new(bool _directed)
 {
     graph* g = (graph*)malloc(sizeof(graph));
-    g->node_array = new_array();
+    g->edges = new_edge_array();
     g->directed = _directed;
     
     return g;
 }
 
-node* graph_search(graph* _graph, float _weight)
+edge* graph_search_edge(graph* _graph, float _weight)
 {
-    for(size_t i=0; i<_graph->node_array->size; i++)
+    for(size_t i=0; i<_graph->edges->size; i++)
     {
-        node* n = _graph->node_array->nodes[i];
-        if(n->weight == _weight)
+        edge* e = _graph->edges->edges[i];
+        if(e->weight == _weight)
         {
-            return n;
+            return e;
         }
     }
     
     return NULL;
 }
 
-node* graph_search_node(graph* _graph, node* _n)
+node* graph_search_node(graph* _graph, float _value)
 {
-    for(size_t i=0; i<_graph->node_array->size; i++)
+    for(size_t i=0; i<_graph->edges->size; i++)
     {
-        node* n = _graph->node_array->nodes[i];
-        if(n == _n)
+        
+        edge* e = _graph->edges->edges[i];
+        if(e->start->value == _value)
         {
-            return n;
+            return e->start;
+        }
+        if(e->end->value == _value)
+        {
+            return e->end;
         }
     }
     
     return NULL;
 }
 
-void append_to_graph(graph* _graph, node* _n)
+void append_to_graph(graph* _graph, edge* _e)
 {
-    append_node_array(_graph->node_array, _n, _graph->node_array->size);
-    
-    for(int i=0; i<_n->connections->size; i++)
-    {   
-        // TODO: do not append a node into the graph if it already present in it
-        // append all nodes the node is connected to into the graph
-        append_node_array(_graph->node_array, _n->connections->nodes[i], _graph->node_array->size);
-    }
+    append_edge_array(_graph->edges, _e, _graph->edges->size);
 }
 
-void append_weight_to_graph(graph* _graph, float _weight)
+void append_edge_to_graph(graph* _graph, float _weight, node* _start, node* _end)
 {
-    node* n = node_new_params(_weight, NULL, 0);
-    append_to_graph(_graph, n);
+    edge* e = edge_new(_weight, _start, _end);
+    append_to_graph(_graph, e);
 }
 
-
-
-bool remove_node(graph* _graph, double _weight)
+bool remove_edge(graph* _graph, edge* _edge)
 {
-    node* to_remove = graph_search(_graph, _weight);
-    
-    if(to_remove == NULL)
+    if(_edge == NULL)
     {
         return false;
     }
     
-    for(int i=0; i<_graph->node_array->size; i++)
+    for(int i=0; i<_graph->edges->size; i++)
     {
-        node* to_update = _graph->node_array->nodes[i];
-        for(int j=0; j<to_update->connections->size; j++)
+        edge* to_remove = _graph->edges->edges[i];
+        
+        if(to_remove == _edge)
         {
-            node* curr_node = to_update->connections->nodes[j];
-            if(curr_node == to_remove)
-            {
-                remove_node_from_array(to_update->connections, curr_node);
-            }
+            remove_edge_from_array(_graph->edges, _edge);
         }
     }
     
@@ -194,9 +183,10 @@ bool remove_node(graph* _graph, double _weight)
 
 void reset_graph(graph* _graph)
 {
-    for(int i=0; i<_graph->node_array->size; i++)
+    for(int i=0; i<_graph->edges->size; i++)
     {
-        node* n = _graph->node_array->nodes[i];
-        n->searched = false;
+        edge* e = _graph->edges->edges[i];
+        e->start->searched = false;
+        e->end->searched = false;
     }
 }

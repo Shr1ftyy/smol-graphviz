@@ -1,36 +1,33 @@
-#include "graph.h" 
+#include "graph.h"
+#include "graphics.h" 
 
 #include <stdio.h>
 
 int main()
 {
     graph* g = graph_new(false);
-    node* n = node_new_params(0.2f, NULL, 0);
-    dynamic_node_array* node_arr = reserve_new_array(4);
-    node* n1 = node_new_params(0.1f, NULL, 0);
-    node* n2 = node_new_params(0.4f, NULL, 0);
-    node* n3 = node_new_params(0.7f, NULL, 0);
-    node* n4 = node_new_params(0.5f, NULL, 0);
+    node* n =  node_new(0.2f);
+    node* n1 = node_new(0.1f);
+    node* n2 = node_new(0.4f);
+    node* n3 = node_new(0.7f);
+    node* n4 = node_new(0.5f);
     
-    append_node_array(n->connections, n1, n->connections->size);
-    append_node_array(n->connections, n2, n->connections->size);
-    append_node_array(n->connections, n3, n->connections->size);
-    append_node_array(n->connections, n4, n->connections->size);
+    edge* e0 = edge_new(0.3, n, n1);
+    edge* e1 = edge_new(0.2, n1, n2);
+    edge* e2 = edge_new(0.3, n2, n3);
+    edge* e3 = edge_new(0.5, n3, n4);
+    edge* e4 = edge_new(0.7, n4, n2);
     
-    append_to_graph(g, n);
+    append_to_graph(g, e0);
+    append_to_graph(g, e1);
+    append_to_graph(g, e2);
+    append_to_graph(g, e3);
+    append_to_graph(g, e4);
     
-    // check if the connected nodes are present
-    for(int i=0; i<n->connections->size; i++)
+    // nodes and edges present in graph
+    for(size_t i=0; i<g->edges->size; i++)
     {
-        printf("%f, ", n->connections->nodes[i]->weight);
-    }
-
-    printf("\n----------\n");
-
-    // check if all nodes are present int the graph
-    for(int i=0; i<g->node_array->size; i++)
-    {
-        printf("%f, ", g->node_array->nodes[i]->weight);
+        printf("%f -- %f --> %f\n", g->edges->edges[i]->start->value ,g->edges->edges[i]->weight, g->edges->edges[i]->end->value);
     }
     
     return 0;
