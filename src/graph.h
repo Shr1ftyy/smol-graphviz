@@ -16,6 +16,12 @@ typedef struct edge
     node* end;
 } edge;
 
+typedef struct dynamic_node_array
+{
+    node** nodes;
+    size_t size;
+} dynamic_node_array;
+
 typedef struct dynamic_edge_array
 {
     edge** edges;
@@ -25,6 +31,7 @@ typedef struct dynamic_edge_array
 typedef struct graph
 {
     dynamic_edge_array* edges;
+    dynamic_node_array* nodes;
     bool directed;
 } graph;
 
@@ -36,6 +43,68 @@ node* node_new(float _value)
     
     return n;
 }
+
+dynamic_node_array* new_node_array()
+{
+    dynamic_node_array* arr = (dynamic_node_array*)malloc(sizeof(dynamic_node_array));
+    arr->size = 0;
+    return arr;
+}
+
+dynamic_node_array* reserve_new_array(size_t _size)
+{
+    dynamic_node_array* arr = (dynamic_node_array*)malloc(sizeof(dynamic_node_array) * _size);
+    arr->nodes =  (node**)malloc(sizeof(node*) * _size);
+    arr->size = 0;
+    return arr;
+}
+
+void* resize_node_array(dynamic_node_array* _array, size_t _size)
+{
+    if (_array->size == 0)
+    {
+        _array->nodes = (node**)malloc(_size * sizeof(node*));
+    }
+    else
+    {
+        _array->nodes = (node**)realloc(_array->nodes, _size * sizeof(node*));
+    }
+
+    _array->size = _size;
+}
+
+void append_node_array(dynamic_node_array* _n, node* _new_node, size_t _n_nodes)
+{
+    resize_node_array(_n, (_n_nodes + 1));
+    _n->nodes[_n_nodes] = _new_node;
+}
+
+bool remove_node_from_array(dynamic_node_array* _n, node* _to_remove)
+{
+    // get index of the node in the node array
+    int pos;
+    for(pos=0; pos<_n->size; pos++)
+    {
+        if(_n->nodes[pos] != _to_remove) continue;
+        
+        // free it when found
+        free(_to_remove);
+        _n->size--;
+        
+        // resize and reposition elements in dynamic array
+        for(; pos<_n->size; pos++)
+        {
+            _n->nodes[pos] = _n->nodes[pos+1];
+        }
+        
+        resize_node_array(_n, sizeof(node*)*_n->size);
+        
+        return true;
+    }
+    
+    return false;
+}
+
 
 dynamic_edge_array* new_edge_array()
 {
@@ -52,7 +121,7 @@ dynamic_edge_array* reserve_new_edge_array(size_t _size)
     return arr;
 }
 
-void* resize_edge_array(dynamic_edge_array* _array, size_t _size)
+void resize_edge_array(dynamic_edge_array* _array, size_t _size)
 {
     if (_array->size == 0)
     {
@@ -112,6 +181,7 @@ graph* graph_new(bool _directed)
 {
     graph* g = (graph*)malloc(sizeof(graph));
     g->edges = new_edge_array();
+    g->nodes = new_node_array();
     g->directed = _directed;
     
     return g;
@@ -150,7 +220,7 @@ node* graph_search_node(graph* _graph, float _value)
     return NULL;
 }
 
-void append_to_graph(graph* _graph, edge* _e)
+void append_edge_ptr_graph(graph* _graph, edge* _e)
 {
     append_edge_array(_graph->edges, _e, _graph->edges->size);
 }
@@ -158,7 +228,18 @@ void append_to_graph(graph* _graph, edge* _e)
 void append_edge_to_graph(graph* _graph, float _weight, node* _start, node* _end)
 {
     edge* e = edge_new(_weight, _start, _end);
-    append_to_graph(_graph, e);
+    append_edge_ptr_graph(_graph, e);
+}
+
+void append_node_ptr_graph(graph* _graph, node* _n)
+{
+    append_node_array(_graph->nodes, _n, _graph->nodes->size);
+}
+
+void append_node_to_graph(graph* _graph, float _value)
+{
+    node* n = node_new(_value);
+    append_node_ptr_graph(_graph, n);
 }
 
 bool remove_edge(graph* _graph, edge* _edge)
