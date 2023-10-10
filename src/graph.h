@@ -69,7 +69,7 @@ void* resize_node_array(dynamic_node_array* _array, size_t _size)
     {
         _array->nodes = (node**)realloc(_array->nodes, _size * sizeof(node*));
     }
-
+    
     _array->size = _size;
 }
 
