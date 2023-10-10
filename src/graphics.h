@@ -61,8 +61,19 @@ node_representation* node_representation_new(node* _node, Vector2 _pos)
     node_representation* node_rep = (node_representation*)malloc(sizeof(node_representation));
     node_rep->node_ptr = _node;
     node_rep->position = _pos;
-
+    
     return node_rep;
+}
+
+void del_node_rep(node_representation* _n)
+{
+    if (_n != NULL)
+    {
+        del_node(_n->node_ptr);
+        free(_n);
+        _n->node_ptr = NULL;
+        _n = NULL;
+    }
 }
 
 // create and return a pointer to an array of node representations
@@ -73,6 +84,13 @@ node_rep_array* node_rep_array_new()
     arr->size = 0;
     
     return arr;
+}
+
+void del_node_rep_array(node_rep_array* _arr)
+{
+    free(_arr->nodes);
+    free(_arr);
+    _arr = NULL;
 }
 
 void resize_node_rep_array(node_rep_array* arr, size_t _size)
@@ -109,6 +127,33 @@ bool append_to_node_reps(node_rep_array* _node_reps, node* _node, Vector2 _pos)
     return true;
 }
 
+bool remove_from_node_reps(node_rep_array* _rep_array, node_representation* _to_remove)
+{
+    // get index of the node in the node array
+    int pos;
+    for(pos=0; pos<_rep_array->size-1; pos++)
+    {
+        if(_rep_array->nodes[pos] != _to_remove) continue;
+        
+        // free it when found
+        free(_to_remove);
+        _to_remove = NULL;
+        _rep_array->size--;
+        
+        // resize and reposition elements in dynamic array
+        for(; pos<_rep_array->size; pos++)
+        {
+            _rep_array->nodes[pos] = _rep_array->nodes[pos+1];
+        }
+        
+        resize_node_rep_array(_rep_array, _rep_array->size);
+        
+        return true;
+    }
+    
+    return false;
+}
+
 // create and return a pointer to a new edge representation
 edge_representation* edge_representation_new(edge* _edge, node_representation* _start, node_representation* _end)
 {
@@ -120,6 +165,26 @@ edge_representation* edge_representation_new(edge* _edge, node_representation* _
     return edge_rep;
 }
 
+void del_edge_rep(edge_representation* _e)
+{
+    if (_e != NULL)
+    {
+        del_edge(_e->edge_ptr);
+        if (_e->start)
+        {
+            del_node_rep(_e->start);
+            _e->start = NULL;
+        }
+        if (_e->end)
+        {
+            del_node_rep(_e->end);
+            _e->end = NULL;
+        }
+        free(_e);
+        _e = NULL;
+    }
+}
+
 edge_rep_array* edge_rep_array_new()
 {
     edge_rep_array* arr = (edge_rep_array*)malloc(sizeof(edge_rep_array));
@@ -129,13 +194,20 @@ edge_rep_array* edge_rep_array_new()
     return arr;
 }
 
+void del_edge_rep_array(edge_rep_array* _arr)
+{
+    free(_arr->edges);
+    free(_arr);
+    _arr = NULL;
+}
+
 void resize_edge_rep_array(edge_rep_array* arr, size_t _size)
 {
     if(arr == NULL)
     {
         return;
     }
-
+    
     if (arr->size <= 0)
     {
         arr->edges = (edge_representation**)malloc(sizeof(edge_representation*) * _size);
@@ -163,19 +235,40 @@ bool append_to_edge_reps(edge_rep_array* _edge_reps, edge* _edge, node_represent
     return true;
 }
 
-bool remove_from_edge_reps(edge_rep_array* _rep_array, edge* _edge)
-{ }
+bool remove_from_edge_reps(edge_rep_array* _rep_array, edge_representation* _to_remove)
+{
+    // get index of the node in the node array
+    int pos;
+    for(pos=0; pos<_rep_array->size-1; pos++)
+    {
+        if(_rep_array->edges[pos] != _to_remove) continue;
+        
+        // free it when found
+        free(_to_remove);
+        _to_remove = NULL;
+        _rep_array->size--;
+        
+        // resize and reposition elements in dynamic array
+        _rep_array->edges[pos] = _rep_array->edges[pos+1];
+        
+        resize_edge_rep_array(_rep_array, _rep_array->size);
+        
+        return true;
+    }
+    
+    return false;
+}
 
 manager* manager_new(graph* _graph, Vector2 _screenDims)
 {    
     dynamic_edge_array* graph_edges = _graph->edges;
     dynamic_node_array* graph_nodes = _graph->nodes;
-
+    
     manager* mgr = (manager*)malloc(sizeof(manager));
     mgr->screenDims = _screenDims;
     mgr->edge_reps = edge_rep_array_new();
     mgr->node_reps = node_rep_array_new();
-
+    
     for(int i=0; i<graph_nodes->size; i++)
     {
         node* n = graph_nodes->nodes[i];
@@ -190,7 +283,7 @@ manager* manager_new(graph* _graph, Vector2 _screenDims)
         edge* e = graph_edges->edges[i];
         node_representation* start = NULL;
         node_representation* end = NULL;
-
+        
         for(int j=0; j<mgr->node_reps->size; j++)
         {
             node_representation* n_rep = mgr->node_reps->nodes[j];
@@ -206,27 +299,69 @@ manager* manager_new(graph* _graph, Vector2 _screenDims)
         
         append_to_edge_reps(mgr->edge_reps, e, start, end);
     }
-
+    
     return mgr;
 }
 
 
 void graphics_draw(manager* _manager, float dt)
 {
+    // check if any nodes need to be deleted
+    for(int i=0; i<_manager->node_reps->size; i++)
+    {
+        node_representation* node = _manager->node_reps->nodes[i];
+        Vector2 mouse_pos = GetMousePosition();
+        bool selected = CheckCollisionPointCircle(node->position, mouse_pos, 20.0);
+        if(IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE) && selected)
+        {
+            // delete the node from the graph
+            remove_from_node_reps(_manager->node_reps, node);
+            node = NULL;
+            // delete all edges which contain the graph;'
+            
+            for(int j=0; j<_manager->edge_reps->size; j++)
+            {
+                edge_representation* edge = _manager->edge_reps->edges[j];
+                if(edge->start == node || edge->end == node)
+                {
+                    remove_from_edge_reps(_manager->edge_reps, edge);
+                    edge = NULL;
+                }
+            }
+        }
+    }
     
     for(int i=0; i<_manager->node_reps->size; i++)
     {
         node_representation* node_rep = _manager->node_reps->nodes[i];
+        // TODO: make size of node graph non-constant
+        Vector2 mouse_pos = GetMousePosition();
+        bool selected = CheckCollisionPointCircle(node_rep->position, mouse_pos, 20.0);
+        
+        if ((IsMouseButtonDown(MOUSE_BUTTON_LEFT)) && selected)
+        {
+            node_rep->position = mouse_pos;
+        }
+        
         DrawCircleLines(node_rep->position.x, node_rep->position.y, 20.0, RED);
         char txt[100];
         char fmt[] = "%.2f";
         sprintf_s(txt, 100, fmt, node_rep->node_ptr->value);
         DrawText(txt, node_rep->position.x, node_rep->position.y, 20, WHITE);
     }
-
+    
     for(int j=0; j<_manager->edge_reps->size; j++)
     {
         edge_representation* edge_rep = _manager->edge_reps->edges[j];
+        if (edge_rep == NULL)
+        {
+            continue;
+        }
+        if (edge_rep->start == NULL || edge_rep->end == NULL)
+        {
+            continue;
+        }
         DrawLineV(edge_rep->start->position, edge_rep->end->position, GREEN);
+        //printf("{%f, %f}, {%f, %f}\n", edge_rep->start->position, edge_rep->end->position);
     }
 }

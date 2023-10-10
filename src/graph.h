@@ -44,11 +44,31 @@ node* node_new(float _value)
     return n;
 }
 
+void del_node(node* _node)
+{
+    if (_node != NULL)
+    {
+        _node->searched = false;
+        _node->value = 0;
+        printf("freeing\n");
+        free(_node);
+        printf("freed\n");
+        _node = NULL;
+        printf("set to null\n");
+    }
+}
+
 dynamic_node_array* new_node_array()
 {
     dynamic_node_array* arr = (dynamic_node_array*)malloc(sizeof(dynamic_node_array));
     arr->size = 0;
     return arr;
+}
+
+void del_node_array(dynamic_node_array* _array)
+{
+    if(_array != NULL) free(_array->nodes);
+    free(_array);
 }
 
 dynamic_node_array* reserve_new_array(size_t _size)
@@ -105,12 +125,47 @@ bool remove_node_from_array(dynamic_node_array* _n, node* _to_remove)
     return false;
 }
 
+edge* edge_new(float _weight, node* _start, node* _end)
+{
+    edge* e = (edge*)malloc(sizeof(edge));
+    e->weight = _weight;
+    e->start = _start;
+    e->end = _end;
+    
+    return e;
+}
+
+void del_edge(edge* _edge)
+{
+    if (_edge != NULL)
+    {
+        if (_edge->start != NULL)
+        {
+            del_node(_edge->start);
+            _edge->start = NULL;
+        }
+        if (_edge->end != NULL)
+        {
+            del_node(_edge->end);
+            _edge->end = NULL;
+        }
+
+        free(_edge);
+        _edge = NULL;
+    }
+}
 
 dynamic_edge_array* new_edge_array()
 {
     dynamic_edge_array* arr = (dynamic_edge_array*)malloc(sizeof(dynamic_edge_array));
     arr->size = 0;
     return arr;
+}
+
+void del_edge_array(dynamic_edge_array* _array)
+{
+    if(_array->edges != NULL) free(_array->edges);
+    if(_array != NULL) free(_array);
 }
 
 dynamic_edge_array* reserve_new_edge_array(size_t _size)
@@ -150,7 +205,7 @@ bool remove_edge_from_array(dynamic_edge_array* _n, edge* _to_remove)
         if(_n->edges[pos] != _to_remove) continue;
         
         // free edge  when found
-        free(_to_remove);
+        del_edge(_to_remove);
         _n->size--;
         
         // resize and reposition elements in dynamic array
@@ -167,16 +222,6 @@ bool remove_edge_from_array(dynamic_edge_array* _n, edge* _to_remove)
     return false;
 }
 
-edge* edge_new(float _weight, node* _start, node* _end)
-{
-    edge* e = (edge*)malloc(sizeof(edge));
-    e->weight = _weight;
-    e->start = _start;
-    e->end = _end;
-    
-    return e;
-}
-
 graph* graph_new(bool _directed)
 {
     graph* g = (graph*)malloc(sizeof(graph));
@@ -185,6 +230,13 @@ graph* graph_new(bool _directed)
     g->directed = _directed;
     
     return g;
+}
+
+void del_graph(graph* _graph)
+{
+    del_edge_array(_graph->edges);
+    del_node_array(_graph->nodes);
+    free(_graph);
 }
 
 edge* graph_search_edge(graph* _graph, float _weight)
