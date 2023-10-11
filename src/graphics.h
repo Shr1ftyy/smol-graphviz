@@ -131,18 +131,18 @@ bool remove_from_node_reps(node_rep_array* _rep_array, node_representation* _to_
 {
     // get index of the node in the node array
     int pos;
-    for(pos=0; pos<_rep_array->size-1; pos++)
+    for(pos=0; pos<_rep_array->size; pos++)
     {
         if(_rep_array->nodes[pos] != _to_remove) continue;
         
         // free it when found
         free(_to_remove);
-        _to_remove = NULL;
         _rep_array->size--;
         
         // resize and reposition elements in dynamic array
-        for(; pos<_rep_array->size; pos++)
+        for(pos=pos; pos<_rep_array->size; pos++)
         {
+
             _rep_array->nodes[pos] = _rep_array->nodes[pos+1];
         }
         
@@ -239,17 +239,21 @@ bool remove_from_edge_reps(edge_rep_array* _rep_array, edge_representation* _to_
 {
     // get index of the node in the node array
     int pos;
-    for(pos=0; pos<_rep_array->size-1; pos++)
+    for(pos=0; pos<_rep_array->size; pos++)
     {
         if(_rep_array->edges[pos] != _to_remove) continue;
         
         // free it when found
         free(_to_remove);
-        _to_remove = NULL;
         _rep_array->size--;
+
         
         // resize and reposition elements in dynamic array
-        _rep_array->edges[pos] = _rep_array->edges[pos+1];
+        for(pos=pos; pos<_rep_array->size; pos++)
+        {
+
+            _rep_array->edges[pos] = _rep_array->edges[pos+1];
+        }
         
         resize_edge_rep_array(_rep_array, _rep_array->size);
         
@@ -275,6 +279,7 @@ manager* manager_new(graph* _graph, Vector2 _screenDims)
         Vector2 pos = getRandomPositionBetween(0, _screenDims.x, 0, _screenDims.y);
         
         append_to_node_reps(mgr->node_reps, n, pos);
+        // printf("updated node array size: %zu\n", mgr->node_reps->size);
     }
     
     // TODO: This is currently O(n^2), improve on this later
@@ -298,6 +303,7 @@ manager* manager_new(graph* _graph, Vector2 _screenDims)
         }
         
         append_to_edge_reps(mgr->edge_reps, e, start, end);
+        // printf("updated edge array size: %zu\n", mgr->edge_reps->size);
     }
     
     return mgr;
@@ -316,7 +322,6 @@ void graphics_draw(manager* _manager, float dt)
         {
             // delete the node from the graph
             remove_from_node_reps(_manager->node_reps, node);
-            node = NULL;
             // delete all edges which contain the graph;'
             
             for(int j=0; j<_manager->edge_reps->size; j++)
@@ -325,9 +330,11 @@ void graphics_draw(manager* _manager, float dt)
                 if(edge->start == node || edge->end == node)
                 {
                     remove_from_edge_reps(_manager->edge_reps, edge);
-                    edge = NULL;
                 }
             }
+
+            // printf("updated nodes size: %zu\n", _manager->node_reps->size);
+            // printf("updated edges size: %zu\n", _manager->edge_reps->size);
         }
     }
     
@@ -349,6 +356,7 @@ void graphics_draw(manager* _manager, float dt)
         snprintf(txt, 100, fmt, node_rep->node_ptr->value);
         DrawText(txt, node_rep->position.x, node_rep->position.y, 20, WHITE);
     }
+
     
     for(int j=0; j<_manager->edge_reps->size; j++)
     {
