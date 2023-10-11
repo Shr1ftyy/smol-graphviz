@@ -346,7 +346,7 @@ void graphics_draw(manager* _manager, float dt)
         DrawCircleLines(node_rep->position.x, node_rep->position.y, 20.0, RED);
         char txt[100];
         char fmt[] = "%.2f";
-        sprintf_s(txt, 100, fmt, node_rep->node_ptr->value);
+        snprintf(txt, 100, fmt, node_rep->node_ptr->value);
         DrawText(txt, node_rep->position.x, node_rep->position.y, 20, WHITE);
     }
     

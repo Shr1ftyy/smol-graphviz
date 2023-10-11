@@ -1,3 +1,7 @@
 cmake -S . -B build
 cmake --build build
-./build/smol-graph.exe
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  ./build/smol-graph
+elif [[ "$OSTYPE" == "msys" ]]; then
+  ./build/smol-graph.exe
+fi

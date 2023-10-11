@@ -50,11 +50,8 @@ void del_node(node* _node)
     {
         _node->searched = false;
         _node->value = 0;
-        printf("freeing\n");
         free(_node);
-        printf("freed\n");
         _node = NULL;
-        printf("set to null\n");
     }
 }
 
